@@ -693,6 +693,73 @@ if(manualRotateState.x!==0||manualRotateState.y!==0){const s=CONFIG.interaction.
             };
             document.addEventListener('pointerdown', unlock);
         })();
+const exportButton = document.createElement('button');
+exportButton.textContent = 'HTMLを保存';
+exportButton.style.cssText = `
+position:fixed;
+top:15px;
+right:15px;
+z-index:99999;
+padding:12px 20px;
+background:#d4af37;
+color:#111;
+border:0;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+`;
+
+exportButton.onclick = async () => {
+    try {
+        const photos = await loadPhotosFromDB();
+        const music = await loadMusicFromDB();
+
+        const musicData = music ? await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(music);
+        }) : null;
+
+        const data = {
+            photos: photos,
+            music: musicData,
+            config: CONFIG,
+            text: {
+                fontKey: document.getElementById('font-select').value,
+                line1: document.getElementById('input-line1').value,
+                line2: document.getElementById('input-line2').value,
+                size: document.getElementById('slider-fontsize').value,
+                color: document.getElementById('color-picker').value
+            }
+        };
+
+        const source = await fetch(location.href).then(r => r.text());
+        const json = JSON.stringify(data).replace(/</g, '\\u003c');
+        const html = source.replace(
+            /const EXPORTED_DATA = null;/,
+            () => 'const EXPORTED_DATA = ' + json + ';'
+        );
+
+        if (html === source) throw new Error('Export unavailable');
+
+        const url = URL.createObjectURL(
+            new Blob([html], {type:'text/html;charset=utf-8'})
+        );
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'My-Christmas-Tree.html';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        alert('保存が完了しました！');
+    } catch(e) {
+        alert('保存に失敗しました：' + e.message);
+    }
+};
+
+if (!EXPORTED_DATA) document.body.appendChild(exportButton);
+
 
         init();
     </script></body></html>
